@@ -21,8 +21,3 @@ orderly::orderly_run("china_plot_intervention_corr", use_draft = TRUE)
 ```
 
 The version of the code here is based on our monorepo at version `0aeaf79`.
-
-orderly run china_extract_new_case_data
-orderly run china_read_exante_data
-orderly run china_intervention_corr_analysis
-orderly run china_plot_intervention_corr
