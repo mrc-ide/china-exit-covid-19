@@ -1,0 +1,382 @@
+---
+title: "Exploratory analysis of exported cases"
+author: "Sangeeta Bhatia and Gina Cuomo-Dannenburg"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  word_document:
+    fig_width: 7
+    fig_height: 5
+    fig_caption: true
+    highlight: "tango"
+    reference_docx: word_style.docx
+---
+
+```{r exported-cases-eda-1 }
+
+## orderly::orderly_run("exported_cases_eda")
+
+## Read directly from google drive to avoid having to download the
+## data. Note that this step will prompt for google sign in and
+## ask you to allow Tidyverse API to access your srive.
+googlesheets4::sheets_deauth()
+exported_raw <- googlesheets4::read_sheet(
+    "https://docs.google.com/spreadsheets/d/1xXv_TT5OarKhl_bcQJE9fYizHYjNViUlG7y5f1c0SEU/edit#gid=207824382",
+    sheet = "by_country",
+    col_types = "c", ## read everything as character, easier than having to guess excel's date format
+    na = c("", "NA") ## sometimes people actually write NA rather than leaving a cell blank.
+    )
+
+exported <- janitor::clean_names(exported_raw)
+
+```
+
+## Make dates
+
+```{r exported-cases-eda-2}
+
+exported$date_report_dd_mm_yyyy <-
+    lubridate::dmy(exported$date_report_dd_mm_yyyy)
+
+    
+```
+
+```{r exported-cases-eda-3 }
+exported$date_travelled_from_wuhan_dd_mm_yyyy <-
+    lubridate::dmy(exported$date_travelled_from_wuhan_dd_mm_yyyy)
+    
+```
+
+```{r exported-cases-eda-4 }
+## Two of these are unclear -  a) > 20/01/2020, b) after 22nd
+exported$date_onset_symptoms_dd_mm_yyyy <-
+    lubridate::dmy(exported$date_onset_symptoms_dd_mm_yyyy)
+
+```
+
+```{r exported-cases-eda-5 }
+## As of 02022020. Again, 2 are unclear.
+exported$date_hospitalized_dd_mm_yyyy <-
+    lubridate::dmy(exported$date_hospitalized_dd_mm_yyyy)
+
+```
+
+```{r exported-cases-eda-6 }
+
+exported$date_confirmed_dd_mm_yyyy <-
+    lubridate::dmy(exported$date_confirmed_dd_mm_yyyy)
+
+```
+
+```{r exported-cases-eda-7 }
+
+exported$date_death_dd_mm_yyyy <-
+    lubridate::dmy(exported$date_death_dd_mm_yyyy)
+
+```
+
+```{r exported-cases-eda-8 }
+
+exported$date_recovered_dd_mm_yyyy <-
+    lubridate::dmy(exported$date_recovered_dd_mm_yyyy)
+
+```
+
+Additional columns - date of outcome (death or discharge). NA if
+unknown. 
+
+
+Check that there are no cases for which dates are not NA.
+
+```{r exported-cases-eda-9 }
+## this should be 0 rows.
+exported[!is.na(exported$date_recovered_dd_mm_yyyy) &
+         !is.na(exported$date_death_dd_mm_yyyy), ]
+
+```
+
+## Coding outcome
+
+```{r exported-cases-eda-10 }
+## outcome - if death of recovery is available, discharged
+## if date of death is available, death
+## if none of the two dates are available, other.
+exported$outcome <- dplyr::case_when(
+    
+    !is.na(exported$date_recovered_dd_mm_yyyy) ~ "recovery",
+    !is.na(exported$date_death_dd_mm_yyyy) ~ "death",
+    TRUE ~ "other"
+    
+)
+
+exported$date_outcome <- dplyr::case_when(
+    
+    exported$outcome == "recovery" ~ exported$date_recovered_dd_mm_yyyy,
+    exported$outcome == "death" ~ exported$date_death_dd_mm_yyyy,
+    exported$outcome == "other" ~ Sys.Date()
+    
+ )
+
+exported$outcome_censored <- dplyr::case_when(
+
+    exported$outcome == "recovery" ~ 0,
+    exported$outcome == "death" ~ 0,
+    TRUE ~ 1
+    
+    )
+
+```
+
+## Fix age
+
+```{r exported-cases-eda-11 }
+## 20s --> 25
+## 30s --> 35 and so on.
+idx_with_s <- grep("s", exported$age_years)
+## Remove s and add 5.
+exported$age_years <- gsub(
+    pattern = "s", replacement = "", x = exported$age_years
+)
+## > 50, 50+,
+idx_with_signs <- grep(">", exported$age_years, fixed = TRUE)
+idx_with_signs <- c(
+    idx_with_signs,
+    grep("+", exported$age_years, fixed = TRUE)
+ )
+
+exported$age_years <- gsub(
+    pattern = ">", replacement = "", x = exported$age_years
+)
+
+exported$age_years <- gsub(
+    pattern = "+", replacement = "", x = exported$age_years, fixed = TRUE
+)
+
+## Make integer and don't worry about rows that don't parse.
+exported$age_years <- as.integer(exported$age_years)
+
+## Add 5 where we have changed stuff.
+exported$age_years[idx_with_signs] <- exported$age_years[idx_with_signs] +
+    5
+
+exported$age_years[idx_with_s] <- exported$age_years[idx_with_s] +
+    5
+
+
+```
+
+```{r exported-cases-eda-12 }
+
+both_dates_available <- dplyr::filter(exported, !is.na(date_travelled_from_wuhan_dd_mm_yyyy) &
+                                                !is.na(date_onset_symptoms_dd_mm_yyyy))
+
+## 03022020. 86 have both dates available.
+
+both_dates_available$onset_after_travel <- dplyr::case_when(
+                                          
+    both_dates_available$date_travelled_from_wuhan_dd_mm_yyyy >= both_dates_available$date_onset_symptoms_dd_mm_yyyy ~ "travel_on_or_after_onset",
+    both_dates_available$date_travelled_from_wuhan_dd_mm_yyyy < both_dates_available$date_onset_symptoms_dd_mm_yyyy ~ "travel_before_onset"
+)
+
+```
+
+## How many of these have pneumonia
+
+How many have either yes/no rather than missing data?
+
+```{r exported-cases-eda-13 }
+sum(! is.na(both_dates_available$pneumonia_y_n))
+```
+
+Group by onset before/after travel
+
+```{r exported-cases-eda-14 }
+
+dplyr::count(both_dates_available, onset_after_travel, pneumonia_y_n)
+
+
+```
+Similarly for case severity classification.
+
+```{r exported-cases-eda-15 }
+
+dplyr::count(both_dates_available, onset_after_travel, classification_mild_moderate_severe)
+
+```
+
+And other symptoms
+
+Fever
+
+```{r exported-cases-eda-16 }
+
+dplyr::count(both_dates_available, onset_after_travel, febrile_y_n)
+
+```
+
+Cough
+
+
+```{r exported-cases-eda-17 }
+
+dplyr::count(both_dates_available, onset_after_travel, cough_y_n)
+
+```
+
+
+# country summary sheet
+Read in the country summary information so we can output this - Lucy and Ilaria will be using this in their tasks
+
+```{r country-summary-1 }
+
+## orderly::orderly_run("exported_cases_eda")
+
+## Read directly from google drive to avoid having to download the
+## data. Note that this step will prompt for google sign in and
+## ask you to allow Tidyverse API to access your srive.
+googlesheets4::sheets_deauth()
+summary_raw <- googlesheets4::read_sheet(
+    "https://docs.google.com/spreadsheets/d/1xXv_TT5OarKhl_bcQJE9fYizHYjNViUlG7y5f1c0SEU/edit#gid=207824382",
+    sheet = "summary_by_country",
+    col_types = "c", ## read everything as character, easier than having to guess excel's date format
+    na = c("", "NA") ## sometimes people actually write NA rather than leaving a cell blank.
+    )
+
+drops <- c("updated_at")
+
+summary_by_country <- summary_raw[ , !(names(summary_raw) %in% drops)] %>% 
+  janitor::clean_names()
+
+```
+
+```{r country-summary-2}
+
+summary_by_country <- summary_by_country %>%
+  filter(!is.na(country))
+
+print(summary_by_country$country)
+
+```
+
+
+
+Make the time stamp and object and then remove these columns from the cleaned version
+```{r country-summary-3}
+
+time_of_update <- summary_raw$updated_at[1]
+
+time_of_update <- lubridate::dmy_hms(time_of_update, tz = "GMT")
+print(time_of_update)
+
+```
+
+
+
+Numeric columns
+```{r country-summary-4}
+
+numeric_col_indices <- grep(c("country|url|url2|notes"), names(summary_by_country), invert = TRUE)
+
+```
+
+Convert to numerics
+
+```{r country-summary-5}
+summary_by_country <- summary_by_country %>% 
+  mutate_at(names(summary_by_country)[numeric_col_indices], as.numeric)
+
+
+```
+
+
+Fix this so that the imputed information cannot be negative -- correct this so that this becomes zero. 
+```{r country-summary-6}
+## if the number of cases to impute is negative, correct this to be zero
+
+summary_by_country$unassigned_recoveries[summary_by_country$unassigned_recoveries < 0] <- 0
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- Similar analysis for deaths. -->
+
+<!-- ```{r exported-cases-eda-12 } -->
+
+<!-- deaths <- readr::read_csv("data/deaths.csv") -->
+<!-- deaths_long <- tidyr::gather( -->
+<!--     deaths, -->
+<!--     key = symptom, -->
+<!--     value = yes, -->
+<!--     pneumonia:underlying_medical_conditions, -->
+<!--     factor_key = TRUE -->
+<!--  ) -->
+
+<!-- ``` -->
+
+<!-- Most common symptoms among those who have died. -->
+
+<!-- ```{r exported-cases-eda-13 } -->
+
+<!-- dplyr::arrange(na.omit(dplyr::count(deaths_long, symptom, yes)), desc(n)) -->
+
+<!-- ``` -->
+
+
+<!-- How much time between onset and death (in cases where we know both -->
+<!-- dates of course)? -->
+
+<!-- ```{r exported-cases-eda-14 } -->
+<!-- out <- dplyr::filter(deaths, ! is.na(date_onset) & ! is.na(date_death)) -->
+
+<!-- sort(lubridate::dmy(out$date_death) - lubridate::dmy(out$date_onset)) -->
+
+<!-- ``` -->
+<!-- Similalry from hospitalisation to onset. -->
+
+<!-- ```{r exported-cases-eda-15 } -->
+<!-- out <- dplyr::filter(deaths, ! is.na(date_onset) & ! is.na(date_hospitalised)) -->
+
+<!-- sort(lubridate::dmy(out$date_hospitalised) - lubridate::dmy(out$date_onset)) -->
+
+<!-- ``` -->
+
+<!-- And death to hospitalisation. -->
+
+<!-- ```{r exported-cases-eda-16 } -->
+
+<!-- out <- dplyr::filter(deaths, ! is.na(date_death) & ! is.na(date_hospitalised)) -->
+
+<!-- sort(lubridate::dmy(out$date_death) - lubridate::dmy(out$date_hospitalised)) -->
+
+<!-- ``` -->
+
+```{r write-csv-files }
+
+readr::write_csv(x = exported_raw, path = "exported_cases_raw.csv")
+readr::write_csv(x = exported, path = "exported_cases_cleaned.csv")
+readr::write_csv(x = summary_raw, path = "summary_by_country_raw.csv")
+readr::write_csv(x = summary_by_country, path = "summary_by_country_cleaned.csv")
+saveRDS(time_of_update, file = "time_exported_case_update.rds")
+
+```

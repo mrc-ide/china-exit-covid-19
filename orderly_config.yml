@@ -1,0 +1,10 @@
+# These three fields are assumed present by the api
+fields:
+  requester:
+    required: true
+  author:
+    required: true
+  comment:
+    required: false
+
+minimum_orderly_version: 1.0.10
