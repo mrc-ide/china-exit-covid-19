@@ -1,0 +1,223 @@
+[ name       ]  china_read_exante_data
+[ id         ]  20200406-173413-6460588d
+[ sources    ]  functions/clean_data_functions.R
+[ ...        ]  functions/test_functions.R
+[ resource   ]  top_six_provinces_population_size.xlsx
+[ ...        ]  full_data_20200325.xlsx
+[ depends    ]  china_extract_new_case_data@20200406-173408-b191e842:china_new_case_data.csv -> china_new_case_data.csv
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+
+Attaching package: ‘janitor’
+
+The following objects are masked from ‘package:stats’:
+
+    chisq.test, fisher.test
+
+
+Attaching package: ‘lubridate’
+
+The following object is masked from ‘package:base’:
+
+    date
+
+[ start      ]  2020-04-06 17:34:14
+
+> path <- "full_data_20200325.xlsx"
+
+> china_new_case_data <- read.csv("china_new_case_data.csv")
+
+> china_data_province_names <- colnames(china_new_case_data)
+
+> movement_data <- read_excel(path = path, sheet = "data", 
++     col_names = TRUE, .name_repair = "minimal")
+
+> duplicated_cols <- which(duplicated(colnames(movement_data)))
+
+> if (length(duplicated_cols) > 0) {
++     movement_data <- movement_data[, -duplicated_cols]
++ }
+
+> colnames(movement_data)[1] <- "date"
+
+> movement_data$date <- date(movement_data$date)
+
+> test_movement_rm_dup_cols(movement_data)
+
+> movement_data <- movement_data %>% pivot_longer(cols = colnames(select(movement_data, 
++     -c("date"))), names_to = "id", values_to = "movement") %>% 
++     mutate(month_day = format(date, "%m-%d"))
+
+> movement_data$id <- as.numeric(movement_data$id)
+
+> meta_data <- read_excel(path = path, sheet = "metadata")
+
+> meta_data <- meta_data %>% clean_names %>% select(c("id", 
++     "city_english", "province_english")) %>% rename(city = city_english, 
++     province = province_english)
+
+> meta_data$province <- convert_to_snake(meta_data$province)
+
+> meta_data$city <- convert_to_snake(meta_data$city)
+
+> duplicated_rows <- which(duplicated(meta_data$id))
+
+> if (length(duplicated_rows) > 0) {
++     meta_data <- meta_data[-duplicated_rows, ]
++ }
+
+> sum(is.na(meta_data))
+[1] 36
+
+> province_ids <- unique(floor(meta_data$id/10000) * 
++     10000)
+
+> province_meta_data <- meta_data %>% filter(id %in% 
++     province_ids) %>% mutate(associated_province_id = id)
+
+> sum(is.na(province_meta_data))
+[1] 29
+
+> province_meta_data <- province_meta_data %>% select(c(id, 
++     city, associated_province_id)) %>% rename(province = "city")
+
+> sum(is.na(province_meta_data))
+[1] 0
+
+> china_data_province_names[which(!(china_data_province_names %in% 
++     province_meta_data$province))]
+[1] "date_confirm"  "hong_kong_sar" "macau_sar"    
+
+> province_meta_data$province[which(!(province_meta_data$province %in% 
++     china_data_province_names))]
+[1] "nationwide" "hong_kong"  "macao"     
+
+> province_meta_data$province <- recode(province_meta_data$province, 
++     hong_kong = "hong_kong_sar", macao = "macau_sar")
+
+> china_data_province_names[which(!(china_data_province_names %in% 
++     province_meta_data$province))]
+[1] "date_confirm"
+
+> city_meta_data <- meta_data %>% filter(!(id %in% province_ids)) %>% 
++     select(-c("province"))
+
+> associated_province_id <- floor(city_meta_data$id/10000) * 
++     10000
+
+> city_meta_data <- city_meta_data %>% bind_cols(associated_province_id = associated_province_id) %>% 
++     left_join(province_meta_data %>% select(c(associated_province_id, 
++         province)), by = "associated_province_id") %>% select(-c(associated_province_id))
+
+> sum(is.na(city_meta_data))
+[1] 0
+
+> meta_data <- province_meta_data %>% bind_cols(city = rep(NA, 
++     length.out = nrow(province_meta_data))) %>% select(-c(associated_province_id)) %>% 
++     bind_rows(city_meta_data)
+
+> mov_id <- unique(movement_data$id)
+
+> meta_id <- unique(meta_data$id)
+
+> which(mov_id %in% meta_id == FALSE)
+integer(0)
+
+> recorded_by_province <- province_meta_data %>% filter(province_meta_data$id %in% 
++     mov_id)
+
+> recorded_by_city <- city_meta_data %>% filter(city_meta_data$id %in% 
++     mov_id)
+
+> sum(recorded_by_province$province %in% recorded_by_city$province)
+[1] 0
+
+> sum(recorded_by_city$province %in% recorded_by_province$province)
+[1] 0
+
+> movement_province_data <- movement_data %>% filter(id %in% 
++     recorded_by_province$id)
+
+> movement_meta_province_data <- movement_province_data %>% 
++     left_join(province_meta_data, by = c(id = "id"))
+
+> movement_city_data <- movement_data %>% filter(id %in% 
++     recorded_by_city$id)
+
+> movement_meta_city_data <- movement_city_data %>% 
++     left_join(city_meta_data, by = c(id = "id"))
+
+> mean_movement <- calc_mean_movement(movement_meta_city_data)
+
+> movement_province_level <- bind_rows(mean_movement, 
++     movement_meta_province_data %>% select(-c(associated_province_id)))
+
+> movement_province_level <- movement_province_level %>% 
++     bind_cols(year = as.character(year(movement_province_level$date)))
+
+> city_population_size_data <- read_excel(path = "top_six_provinces_population_size.xlsx", 
++     col_names = TRUE)
+New names:
+* `` -> ...1
+
+> city_population_size_data <- city_population_size_data %>% 
++     clean_names() %>% select(c(id, province, pop))
+
+> city_population_size_data$province <- convert_to_snake(city_population_size_data$province)
+
+> top_six_province_ids <- floor(city_population_size_data$id/10000) * 
++     10000
+
+> city_population_size_data <- city_population_size_data %>% 
++     mutate(associated_province_id = top_six_province_ids)
+
+> movement_data_subset <- movement_data %>% filter(id %in% 
++     unique(city_population_size_data$id))
+
+> movement_data_subset <- bind_cols(movement_data_subset, 
++     year = as.character(year(movement_data_subset$date)))
+
+> movement_meta_data_subset <- movement_data_subset %>% 
++     left_join(city_population_size_data)
+Joining, by = "id"
+
+> weighted_data <- calc_weighted_mean_movement(movement_meta_city_df = movement_meta_data_subset)
+
+> weighted_data <- weighted_data %>% select(c(date, 
++     id, month_day, province, movement, year))
+
+> top_six_beijing_hk <- movement_province_level %>% 
++     filter(province %in% c("beijing", "hong_kong_sar")) %>% bind_rows(weighted_data)
+
+> saveRDS(movement_province_level, "exante_movement_data.rds")
+
+> write.csv(movement_province_level, "exante_movement_data.csv")
+
+> saveRDS(weighted_data, "top_six_pop_weighted_exante_movement_data.rds")
+
+> write.csv(weighted_data, "top_six_pop_weighted_exante_movement_data.csv")
+
+> saveRDS(top_six_beijing_hk, "movement_province_level_subset.rds")
+
+> write.csv(top_six_beijing_hk, "movement_province_level_subset.csv")
+[ end        ]  2020-04-06 17:34:57
+[ elapsed    ]  Ran report in 42.97071 secs
+[ artefact   ]  exante_movement_data.csv: 4c007dd765e5713025cd793916dc4fb0
+[ ...        ]  exante_movement_data.rds: 8293327fb8af547d697b580503c94f99
+[ ...        ]  top_six_pop_weighted_exante_movement_data.csv: 81edf3d68ee97cf336d1dcc2b3dbf6cf
+[ ...        ]  top_six_pop_weighted_exante_movement_data.rds: c6d24790be38077da3f9a2c693daf14a
+[ ...        ]  movement_province_level_subset.csv: 9b61252455f4f3b83f38f57f18ae24e6
+[ ...        ]  movement_province_level_subset.rds: 1892f2a5f83858601eda1683007b3ddc
+[ commit     ]  china_read_exante_data/20200406-173413-6460588d
+[ copy       ]
+[ import     ]  china_read_exante_data:20200406-173413-6460588d
+[ success    ]  :)

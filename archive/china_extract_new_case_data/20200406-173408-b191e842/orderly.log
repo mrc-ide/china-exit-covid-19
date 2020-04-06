@@ -1,0 +1,71 @@
+[ name       ]  china_extract_new_case_data
+[ id         ]  20200406-173408-b191e842
+[ resource   ]  extract_china_new_case_data.Rmd
+[ ...        ]  word_style.docx
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+
+Attaching package: ‘janitor’
+
+The following objects are masked from ‘package:stats’:
+
+    chisq.test, fisher.test
+
+
+Attaching package: ‘lubridate’
+
+The following object is masked from ‘package:base’:
+
+    date
+
+[ start      ]  2020-04-06 17:34:09
+
+> rmd <- dir(pattern = ".Rmd")
+
+> if (length(rmd) != 1) {
++     stop("More than one Rmd is present, please edit script.R")
++ }
+
+> rmarkdown::render(rmd)
+
+
+processing file: extract_china_new_case_data.Rmd
+  |                                                                              |                                                                      |   0%  |                                                                              |............                                                          |  17%
+   inline R code fragments
+
+  |                                                                              |.......................                                               |  33%
+label: read_in_google_sheet
+  |                                                                              |...................................                                   |  50%
+  ordinary text without R code
+
+  |                                                                              |...............................................                       |  67%
+label: imported_data_wrangling
+  |                                                                              |..........................................................            |  83%
+  ordinary text without R code
+
+  |                                                                              |......................................................................| 100%
+label: unnamed-chunk-1
+
+output file: extract_china_new_case_data.knit.md
+
+/usr/bin/pandoc +RTS -K512m -RTS extract_china_new_case_data.utf8.md --to docx --from markdown+autolink_bare_uris+tex_math_single_backslash+smart --output extract_china_new_case_data.docx --highlight-style tango --reference-doc word_style.docx --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmd/lua/pagebreak.lua 
+
+Output created: extract_china_new_case_data.docx
+[ end        ]  2020-04-06 17:34:12
+[ elapsed    ]  Ran report in 2.610314 secs
+[ artefact   ]  extract_china_new_case_data.docx: bc16afd1b27c8abddda7d64581b16d3c
+[ ...        ]  china_new_case_data.csv: 0cec57d3f05463fa59b20dbe97f33801
+[ ...        ]  china_new_case_data_imported.csv: fb5cae3f796e4402a9813b99629281a8
+[ commit     ]  china_extract_new_case_data/20200406-173408-b191e842
+[ copy       ]
+[ import     ]  china_extract_new_case_data:20200406-173408-b191e842
+[ success    ]  :)

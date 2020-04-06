@@ -1,0 +1,5 @@
+* Note that this task requires you to authorise Tidyverse API to access your google drive files.
+* The dates in the cleaned data (exported_cases_cleaned.csv) are in the form yyy-mm-dd but the column names contain dd_mm_yyyy (Thanks Marc for pointing this out).
+ I have retained the outdated column names to avoid breaking other code that uses this file.
+* Please manually check the output to make sure that the dates that have failed to parse are indeed blank or NA or some other format that cannot be parsed. 
+ 

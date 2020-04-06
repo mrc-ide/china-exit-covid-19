@@ -1,0 +1,443 @@
+---
+title: "Plots of China intervention correlation analyses"
+author: "Kylie Ainslie"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  word_document:
+    fig_width: 7
+    fig_height: 5
+    fig_caption: true
+    highlight: "tango"
+    reference_docx: word_style.docx
+---
+```{r read_in_data}
+dat_all <- readr::read_csv("dat_all.csv")
+dat_lag_sa <- readr::read_csv("dat_all_lag_sens_analysis.csv")
+
+dat_movement <- readRDS("movement_province_level_subset.rds")
+
+dat_imported <- readr::read_csv("china_new_case_data_imported.csv") %>% 
+                  mutate(date_confirm = as.Date(date_confirm)) %>%
+                  filter(province %in% c("hubei", "guangdong", "henan", "zhejiang",
+                                         "hunan", "beijing", "hong_kong_sar"))
+```
+
+```{r set_plot_style}
+
+# colours
+col_cases <- brewer.pal(8, "Reds")[6] 
+col_2019 <- brewer.pal(8, "Blues")[5] 
+col_2020 <- brewer.pal(8, "Blues")[8] 
+col_Rt <- brewer.pal(8, "Greens")[5] 
+col_inter_corr <- brewer.pal(8, "RdPu")[5] 
+col_intra_corr <- brewer.pal(8, "RdPu")[8]
+
+col_text <- "black"  
+col_box <- "#2c3e50"  # colour found from running 'calc_element("axis.text.x", theme_tq())'
+
+# colours used by KA in earlier versions of plots
+# cols2 <- c("movement" = "#00BFC4", "r_mean" = "#00BA38", "rolling.corr.biweekly" = "darkblue", "rolling.corr.hubei" = "#FF61CC")
+
+
+# theme for the plots, controlling white space
+  plot_theme <- theme(legend.position = "none",
+                      panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      panel.background = element_blank(),
+                      axis.text.x = element_text(angle = 45, hjust = 1),
+                      panel.spacing.x = unit(0.2, "lines"),
+                      panel.spacing.y = unit(0.2, "lines"),
+                      plot.margin = unit(c(0, 0, 0, 0), "cm"),
+                      legend.title = element_blank(),
+                      panel.border = element_rect(fill = NA, 
+                                                  size = rel(1/2), 
+                                                  color = col_text))
+
+# theme for facet grid, control label text and box
+facet_theme <-  theme(
+  strip.text.x = element_text(
+    size = 12, color = col_text
+  ),
+  strip.text.y = element_text(
+    size = 12, color = col_text
+  ),
+  strip.background = element_blank()
+)
+
+
+
+# facet labels for each province and metric
+
+province_labels <- c("hubei" = "Hubei", 
+                     "guangdong" = "Guangdong", 
+                     "henan" = "Henan", 
+                     "zhejiang" = "Zhejiang", 
+                     "hunan" = "Hunan", 
+                     "beijing" = "Beijing",
+                     "cases" = "cases",
+                     "movement" = "movement",
+                     "hong_kong_sar" = "Hong Kong SAR")
+
+```
+
+```{r shift_2019_movement_data}
+
+# shift the 2019 data to line up on LNY with 2020 data - this is done by '-13'
+dat_2020 <- dat_movement %>% filter(year == "2020")
+
+join_dat <- dat_movement %>% 
+              filter(year == "2020") %>% 
+              select(c(date, month_day, province))
+
+dat_2019 <- dat_movement %>% 
+              filter(year == "2019") %>% 
+              mutate(date = date - 13) %>%
+              filter(date >= "2019-01-01") %>%
+              mutate(month_day =  format(date, "%m-%d")) %>% 
+              select(-c(date)) %>%
+              left_join(join_dat, by = c("month_day", "province"))  
+
+dat_movement <- bind_rows(dat_2019, dat_2020)
+
+```
+# Plot of cases and movement for Top 5 and Beijing
+```{r plot_fig1}
+# join movement with case data
+dat_case_move <- left_join(dat_imported, dat_movement, by = c("date_confirm" = "date", "province")) %>%
+                    select(date_confirm, province, new_cases_wo_imported, movement, year) %>%
+                    rename("cases" = "new_cases_wo_imported") %>%
+                    pivot_wider(names_from = "year", values_from = "movement") %>%
+                    rename(movement_2019 = "2019", movement_2020 = "2020") %>%
+                    pivot_longer(cols = c(cases, movement_2019, movement_2020), names_to = "metric") %>%
+                    mutate(metric2 = metric) %>%
+                    mutate(metric2 = recode(metric2, movement_2019 = "movement", movement_2020 = "movement"))
+
+
+no_hubei <- dat_case_move %>% filter(province %in% c("guangdong", "henan", "zhejiang",
+                                                     "hunan", "beijing"))
+hubei <- dat_case_move %>% filter(province == 'hubei')
+
+p1 <- ggplot(data = no_hubei,aes(x = date_confirm, y = value, color = metric)) +
+        geom_line() +
+        xlab("Date") + ylab("") +
+        scale_color_manual(values = c(col_cases, col_2019, col_2020),  
+                           breaks=c("cases","movement_2019", "movement_2020"),
+                           labels = c("Number of New Cases","Movement 2019", "Movement 2020")) +
+        scale_x_date(labels = date_format("%Y-%m-%d")) +
+        scale_y_continuous(limits = c(0, NA)) +
+        guides(color=guide_legend(nrow=2,byrow=TRUE)) +
+        plot_theme +
+        theme(axis.title.x=element_blank()) +
+        facet_grid(metric2~province, scales = "free_y", labeller = as_labeller(province_labels)) +
+        facet_theme
+
+legend_b <- get_legend(
+  p1 +
+    guides(color = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom",
+          legend.key=element_blank())
+)
+
+p2 <- ggplot(data = hubei,aes(x = date_confirm, y = value, color = metric)) +
+        geom_line() +
+        # xlab("") + 
+        ylab("") +
+        scale_color_manual(values = c(col_cases, col_2019, col_2020),  
+                           breaks=c("cases","movement_2019", "movement_2020"),
+                           labels = c("Number of New Cases","Movement 2019", "Movement 2020")) +
+        scale_x_date(labels = date_format("%Y-%m-%d")) +
+        scale_y_continuous(limits = c(0, NA)) +
+        guides(color=guide_legend(nrow=2,byrow=TRUE)) +
+        plot_theme +
+        theme(axis.title.x=element_blank()) +
+        facet_grid(metric2~province, scales = "free_y", labeller = as_labeller(province_labels)) +
+        facet_theme +
+        theme(strip.text.y = element_blank(),
+          legend.key=element_blank())
+
+p3 <- plot_grid(p2, p1, labels = "", nrow = 1, rel_widths = c(.27, 1))
+p_fig1 <- plot_grid(p3, 
+                    textGrob("Date", gp=gpar(fontsize= 12, col=col_text, face = "plain")),
+                    legend_b, 
+                    ncol = 1, 
+                    rel_heights = c(1, .05, .1))
+
+
+ggsave("figure1.png", p_fig1,
+  width = 8, height = 5,
+  dpi = 500)
+```
+
+```{r wide_to_long}
+dat_all_long <- dat_all %>% 
+                  select(date_lag, province, r_mean, movement,
+                         rolling.corr.biweekly, rolling.corr.hubei, 
+                         r_q2.5, r_q97.5, r_median) %>%
+                  mutate(date_lag = as.Date(date_lag)) %>%
+                  gather(metric, value, r_mean:r_median) %>% 
+                  filter(metric %in% c("r_mean","movement", "rolling.corr.biweekly", 
+                                       "rolling.corr.hubei"))
+
+dat_lag_sa_long <- dat_lag_sa %>%
+                    select(date_lag, province, r_mean, movement,
+                         rolling.corr.biweekly, r_q2.5, r_q97.5, r_median) %>%
+                    mutate(date_lag = as.Date(date_lag)) %>%
+                    gather(metric, value, r_mean:r_median) %>% 
+                    filter(metric %in% c("r_mean","movement", "rolling.corr.biweekly"))
+```
+
+# Plot Top 5 provinces with most confirmed cases and Beijing
+```{r plot_fig2}
+# top 6 countries: hubei, guangdong, henan, zhejiang, hunan, beijing
+dat_all_no_hk <- dat_all %>% filter(province != "hong_kong_sar")
+dat_all_long_no_hk <- dat_all_long %>% filter(province != "hong_kong_sar")
+
+ymax = 6.6 # maximum y value for plotting
+# truncating the x-axis so that the Fig 2 plot looks nice
+min_date <- as.Date("2020-01-23") # "2020-01-20" 
+max_date <- as.Date("2020-04-02") # "2020-03-24"
+
+dat_all_no_hk_trunc <- dat_all_no_hk %>% 
+  filter(date_lag >= min_date) %>% 
+  filter(date_lag <= max_date) %>%
+  mutate(r_q2.5 = ifelse(r_q2.5 > ymax, ymax, r_q2.5),
+         r_q97.5 = ifelse(r_q97.5 > ymax, ymax, r_q97.5))
+
+dat_all_long_no_hk_trunc <- dat_all_long_no_hk %>% 
+  filter(date_lag >= min_date) %>% 
+  filter(date_lag <= max_date)
+
+
+cols2 <- c("movement" = col_2020, "r_mean" = col_Rt, "rolling.corr.biweekly" =   col_intra_corr, "rolling.corr.hubei" = col_inter_corr)
+
+# plot with: movement, Rt, intra-corr
+p_fig2 <- ggplot(data = dat_all_no_hk_trunc, aes(x = date_lag, y = r_mean)) +
+  geom_line(data = filter(dat_all_long_no_hk_trunc, !(metric %in% "rolling.corr.hubei")),
+           aes(x = date_lag, y = value, color = metric)) + 
+  geom_ribbon(aes(ymin=r_q2.5,ymax=r_q97.5), 
+              fill= col_Rt ,alpha=0.2)+ 
+  xlab("Date") + ylab("") + 
+  scale_color_manual(values = cols2, name = "", 
+                     breaks=c("movement", "r_mean", "rolling.corr.biweekly"),
+                     labels = c("Movement Index", "Reproduction Number",  
+                                "Correlation Local")) +
+  scale_x_date(labels = date_format("%Y-%m-%d")) +
+  scale_y_continuous(limits = c(-1, ymax)) +
+  geom_hline(yintercept = 1, linetype="dashed", colour = "black") +
+  geom_hline(yintercept = -1, linetype="dashed", colour = "black") +
+  geom_hline(yintercept = 0, colour = "black") +
+  guides(color=guide_legend(nrow=1,byrow=TRUE)) +
+  plot_theme +
+  facet_wrap(~ province, labeller = as_labeller(province_labels)) +
+  facet_theme
+
+legend_fig2 <- get_legend(
+  p_fig2 +
+    guides(color = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom",
+          legend.key=element_blank())
+)
+
+p_fig2 <- plot_grid(p_fig2,
+                    legend_fig2, 
+                    ncol = 1, 
+                    rel_heights = c(1, .1))
+
+ggsave("figure2.png", p_fig2,
+  width = 8, height = 7,
+  dpi = 500)
+
+```
+
+```{r plot_fig2_supp}
+# plot with: movement, Rt, inter-corr, intra-corr
+p_fig2_SI <- ggplot(data = dat_all_no_hk, aes(x = date_lag, y = r_mean)) +
+  geom_line(data = dat_all_long_no_hk,
+            aes(x = date_lag, y = value, color = metric)) + 
+  geom_ribbon(aes(ymin=r_q2.5,ymax=r_q97.5), 
+              fill= col_Rt ,alpha=0.2)+ 
+  xlab("Date") + ylab("") + 
+  scale_color_manual(values = cols2, name = "", 
+                     breaks=c("movement", "r_mean", "rolling.corr.biweekly",
+                              "rolling.corr.hubei"),
+                     labels = c("Movement Index", "Reproduction Number",  
+                                "Correlation Local", "Correlation Hubei")) +
+  scale_x_date(labels = date_format("%Y-%m-%d")) +
+  scale_y_continuous(limits = c(-1, 18)) +
+  geom_hline(yintercept = 1, linetype="dashed", colour = "black") +
+  geom_hline(yintercept = -1, linetype="dashed", colour = "black") +
+  geom_hline(yintercept = 0, colour = "black") +
+  #scale_color_tq() +
+  guides(color=guide_legend(nrow=1,byrow=TRUE)) +
+  plot_theme +
+  facet_wrap(~ province, labeller = as_labeller(province_labels)) +
+  facet_theme
+
+legend_fig2_SI <- get_legend(
+  p_fig2_SI +
+    guides(color = guide_legend(nrow = 1)) +
+    theme(legend.position = "bottom",
+          legend.key=element_blank())
+)
+
+
+
+
+p_fig2_SI <- plot_grid(p_fig2_SI,
+                       legend_fig2_SI, 
+                       ncol = 1, 
+                       rel_heights = c(1, .1))
+
+ggsave("figure2_SI.png", p_fig2_SI,
+  width = 8, height = 7,
+  dpi = 500)
+```
+
+
+```{r plot_fig3}
+
+hk_dat <- dat_all %>% 
+  filter(province == "hong_kong_sar")
+hk_dat_long <- dat_all_long %>% 
+  filter(province == "hong_kong_sar",
+         metric %in% c("r_mean","movement","rolling.corr.biweekly"))
+hk_cases <- dat_case_move %>% filter(province == 'hong_kong_sar')
+
+
+p_fig3a <- ggplot(data = hk_cases, aes(x = date_confirm, y = value, color = metric)) +
+  geom_line() +
+  xlab("Date") + ylab("") +
+  scale_color_manual(values = c(col_cases, col_2019, col_2020), name = "", 
+                     breaks=c("cases","movement_2019", "movement_2020"),
+                     labels = c("Number of New Cases","Movement 2019", "Movement 2020")) +
+  scale_x_date(labels = date_format("%Y-%m-%d")) +
+  guides(color=guide_legend(nrow=2,byrow=TRUE)) +
+  plot_theme +
+  facet_grid(metric2~province, scales = "free_y", labeller = as_labeller(province_labels)) +
+  facet_theme 
+
+
+
+p_fig3b <- ggplot(data = hk_dat, aes(x = date_lag, y = r_mean)) +
+  geom_line(data = hk_dat_long,
+            aes(x = date_lag, y = value, color = metric)) + 
+  geom_ribbon(aes(ymin=r_q2.5,ymax=r_q97.5), 
+              fill= col_Rt ,alpha=0.2)+ 
+  xlab("Date") + ylab("") + #ggtitle("Hong Kong") +
+  scale_color_manual(values = cols2, name = "", 
+                     breaks=c("movement", "r_mean", "rolling.corr.biweekly",
+                              "rolling.corr.hubei"),
+                     labels = c("Movement Index", "Reproduction Number",  
+                                "Intra-region Correlation", "Inter-region Correlation")) +
+  scale_x_date(labels = date_format("%Y-%m-%d")) +
+  geom_hline(yintercept = 1, linetype="dashed", colour = "black") +
+  geom_hline(yintercept = -1, linetype="dashed", colour = "black") +
+  geom_hline(yintercept = 0, colour = "black") +
+  plot_theme
+
+
+
+# create a nonsense plot to get the correct legend for Fig3
+p_leg <- ggplot(data = hk_dat, aes(x = date_lag, y = r_mean)) +
+  geom_line(data = hk_dat_long,
+            aes(x = date_lag, y = value, color = metric)) + 
+  geom_line(data = hk_cases %>% filter(!(metric %in% "movement_2020")), 
+            aes(x = date_confirm, y = value, color = metric)) +
+  geom_ribbon(aes(ymin=r_q2.5,ymax=r_q97.5), 
+              fill= col_Rt ,alpha=0.2) +
+  scale_color_manual(values = c("cases" = col_cases, "movement_2019" = col_2019, cols2), name = "", 
+                     breaks=c("cases","movement_2019", "movement", "r_mean", "rolling.corr.biweekly"),
+                     labels = c("Number of New Cases", "Movement 2019", 
+                                "Movement 2020", "Reproduction Number",  
+                                "Correlation Local")) +
+  scale_x_date(labels = date_format("%Y-%m-%d")) +
+  theme_tq() +
+  plot_theme
+
+
+
+
+leg <- get_legend(
+  p_leg +
+    guides(color = guide_legend(nrow = 2)) +
+    theme(legend.position = "bottom")
+)
+
+
+join_plots <- plot_grid(p_fig3a, 
+                        p_fig3b,
+                        labels = "AUTO",
+                        ncol = 2, 
+                        rel_widths = c(.5, 1))
+
+p_fig3 <- plot_grid(join_plots,
+                    leg,
+                    nrow = 2, 
+                    rel_heights = c(1, 0.15))
+
+ggsave("figure3.png", p_fig3,
+  width = 8, height = 6,
+  dpi = 500)
+
+```
+
+# Lag sensitivity analysis plots
+```{r plot_lag_sa}
+# top 6 countries: hubei, guangdong, henan, zhejiang, hunan, beijing
+dat_lag_no_hk <- dat_lag_sa %>% filter(province != "hong_kong_sar")
+dat_lag_long_no_hk <- dat_lag_sa_long %>% filter(province != "hong_kong_sar")
+
+cols2a <- c("movement" = col_2020, "r_mean" = col_Rt, "rolling.corr.biweekly" =   col_intra_corr)
+
+# plot correlation using province-specific lags
+p_fig2_SI2 <- ggplot(data = dat_lag_no_hk, aes(x = date_lag, y = r_mean)) +
+                geom_line(data = dat_lag_long_no_hk,aes(x = date_lag, y = value, color = metric)) + 
+                geom_ribbon(aes(ymin=r_q2.5,ymax=r_q97.5), fill = cols2a[2] , alpha=0.2)+ 
+                xlab("Date") + ylab("") + 
+                scale_color_manual(values = cols2a, name = "", 
+                     breaks=c("movement", "r_mean", "rolling.corr.biweekly"),
+                     labels = c("Movement Index", "Reproduction Number", "Intra-region Correlation")) +
+                scale_x_date(labels = date_format("%Y-%m-%d")) +
+                scale_y_continuous(limits = c(-1, 10)) +
+                geom_hline(yintercept = 1, linetype="dashed", colour = "black") +
+                geom_hline(yintercept = -1, linetype="dashed", colour = "black") +
+                geom_hline(yintercept = 0, colour = "black") +
+                guides(color=guide_legend(nrow=2,byrow=TRUE)) +
+                #plot_theme +
+                facet_wrap(~ province) #+
+                #facet_theme
+
+# ggsave("figure2_SI2.png", p_fig2_SI2,
+#   width = 8, height = 7,
+#   dpi = 500)
+```
+
+
+# movement plots
+```{r plot_movement}
+# p_mov <- ggplot(data = dat_movement %>% filter(province %in% c("hubei", "guangdong", "henan", "zhejiang","hunan", "beijing")),
+#        aes(x = month_day, y = movement, group = year,
+#            col = as.factor(year))) +
+#   geom_line() +
+#   xlab("date") +
+#   ylab("movement index") +
+#   facet_wrap(vars(province)) +
+#   theme_tq(base_size = 12) + 
+#   theme(panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         panel.background = element_blank(),
+#         axis.line = element_line(colour = "black"),
+#         axis.text.x = element_text(angle = 45, hjust = 1)) +
+#   labs(col = "year") +
+# scale_x_discrete( breaks = c("01-01", "01-16",  "02-01", "02-16", "03-01", "03-16")) +
+#   scale_color_manual(values = c(col_2019, col_2020)) +
+#   theme(legend.position="bottom") +
+#   facet_wrap(~ province)
+# 
+# # LNY 2020 was at "01-23"
+# 
+# ggsave("movement.png", p_mov,
+#   width = 10, height = 7,
+#   dpi = 300)
+```
+

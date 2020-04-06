@@ -1,0 +1,157 @@
+[ name       ]  china_plot_intervention_corr
+[ id         ]  20200406-173508-08e75d3f
+[ resource   ]  plot_intervention_corr.Rmd
+[ ...        ]  word_style.docx
+[ depends    ]  china_intervention_corr_analysis@20200406-173458-5e8f0319:dat_all.csv -> dat_all.csv
+[ ...        ]  china_intervention_corr_analysis@20200406-173458-5e8f0319:dat_all_lag_sens_analysis.csv -> dat_all_lag_sens_analysis.csv
+[ ...        ]  china_read_exante_data@20200406-173413-6460588d:movement_province_level_subset.rds -> movement_province_level_subset.rds
+[ ...        ]  china_extract_new_case_data@20200406-173408-b191e842:china_new_case_data_imported.csv -> china_new_case_data_imported.csv
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: lubridate
+
+Attaching package: ‘lubridate’
+
+The following object is masked from ‘package:base’:
+
+    date
+
+Loading required package: PerformanceAnalytics
+Loading required package: xts
+Loading required package: zoo
+
+Attaching package: ‘zoo’
+
+The following objects are masked from ‘package:base’:
+
+    as.Date, as.Date.numeric
+
+
+Attaching package: ‘xts’
+
+The following objects are masked from ‘package:dplyr’:
+
+    first, last
+
+
+Attaching package: ‘PerformanceAnalytics’
+
+The following object is masked from ‘package:graphics’:
+
+    legend
+
+Loading required package: quantmod
+Loading required package: TTR
+Registered S3 method overwritten by 'quantmod':
+  method            from
+  as.zoo.data.frame zoo 
+Version 0.4-0 included new data defaults. See ?getSymbols.
+══ Need to Learn tidyquant? ════════════════════════════════════════════════════
+Business Science offers a 1-hour course - Learning Lab #9: Performance Analysis & Portfolio Optimization with tidyquant!
+</> Learn more at: https://university.business-science.io/p/learning-labs-pro </>
+
+********************************************************
+Note: As of version 1.0.0, cowplot does not change the
+  default ggplot2 theme anymore. To recover the previous
+  behavior, execute:
+  theme_set(theme_cowplot())
+********************************************************
+
+
+Attaching package: ‘cowplot’
+
+The following object is masked from ‘package:lubridate’:
+
+    stamp
+
+[ start      ]  2020-04-06 17:35:09
+
+> rmd <- dir(pattern = ".Rmd")
+
+> if (length(rmd) != 1) {
++     stop("More than one Rmd is present, please edit script.R")
++ }
+
+> rmarkdown::render(rmd)
+
+
+processing file: plot_intervention_corr.Rmd
+  |                                                                              |                                                                      |   0%  |                                                                              |...                                                                   |   5%
+   inline R code fragments
+
+  |                                                                              |.......                                                               |  10%
+label: read_in_data
+  |                                                                              |..........                                                            |  14%
+  ordinary text without R code
+
+  |                                                                              |.............                                                         |  19%
+label: set_plot_style
+  |                                                                              |.................                                                     |  24%
+  ordinary text without R code
+
+  |                                                                              |....................                                                  |  29%
+label: shift_2019_movement_data
+  |                                                                              |.......................                                               |  33%
+  ordinary text without R code
+
+  |                                                                              |...........................                                           |  38%
+label: plot_fig1
+  |                                                                              |..............................                                        |  43%
+  ordinary text without R code
+
+  |                                                                              |.................................                                     |  48%
+label: wide_to_long
+  |                                                                              |.....................................                                 |  52%
+  ordinary text without R code
+
+  |                                                                              |........................................                              |  57%
+label: plot_fig2
+  |                                                                              |...........................................                           |  62%
+  ordinary text without R code
+
+  |                                                                              |...............................................                       |  67%
+label: plot_fig2_supp
+  |                                                                              |..................................................                    |  71%
+  ordinary text without R code
+
+  |                                                                              |.....................................................                 |  76%
+label: plot_fig3
+  |                                                                              |.........................................................             |  81%
+  ordinary text without R code
+
+  |                                                                              |............................................................          |  86%
+label: plot_lag_sa
+  |                                                                              |...............................................................       |  90%
+  ordinary text without R code
+
+  |                                                                              |...................................................................   |  95%
+label: plot_movement
+  |                                                                              |......................................................................| 100%
+  ordinary text without R code
+
+
+output file: plot_intervention_corr.knit.md
+
+/usr/bin/pandoc +RTS -K512m -RTS plot_intervention_corr.utf8.md --to docx --from markdown+autolink_bare_uris+tex_math_single_backslash+smart --output plot_intervention_corr.docx --highlight-style tango --reference-doc word_style.docx --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmd/lua/pagebreak.lua 
+
+Output created: plot_intervention_corr.docx
+[ end        ]  2020-04-06 17:35:18
+[ elapsed    ]  Ran report in 9.037776 secs
+[ artefact   ]  plot_intervention_corr.docx: 6e8a7b765f7b191555dad4e735fa3bed
+[ ...        ]  figure1.png: aec1b59a124f6a48ee0d73a2f3ab4fda
+[ ...        ]  figure2.png: 82c4b56ff82b16233ecff2b70b82cdb6
+[ ...        ]  figure3.png: 27089ad0aa9943567f26f484b16e986f
+[ ...        ]  figure2_SI.png: d758625a572904d03c8204ce65a8a26a
+[ commit     ]  china_plot_intervention_corr/20200406-173508-08e75d3f
+[ copy       ]
+[ import     ]  china_plot_intervention_corr:20200406-173508-08e75d3f
+[ success    ]  :)
