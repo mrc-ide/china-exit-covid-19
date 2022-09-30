@@ -1,154 +1,0 @@
-[ name       ]  china_intervention_corr_analysis
-[ id         ]  20200406-173458-5e8f0319
-[ resource   ]  intervention_corr_analysis.Rmd
-[ ...        ]  word_style.docx
-[ depends    ]  china_extract_new_case_data@20200406-173408-b191e842:china_new_case_data.csv -> china_new_case_data.csv
-[ ...        ]  china_extract_new_case_data@20200406-173408-b191e842:china_new_case_data_imported.csv -> china_new_case_data_imported.csv
-[ ...        ]  china_read_exante_data@20200406-173413-6460588d:exante_movement_data.csv -> exante_movement_data.csv
-[ ...        ]  china_read_exante_data@20200406-173413-6460588d:movement_province_level_subset.rds -> movement_province_level_subset.rds
-── Attaching packages ─────────────────────────────────────── tidyverse 1.3.0 ──
-✔ ggplot2 3.2.1     ✔ purrr   0.3.3
-✔ tibble  2.1.3     ✔ dplyr   0.8.4
-✔ tidyr   1.0.2     ✔ stringr 1.4.0
-✔ readr   1.3.1     ✔ forcats 0.4.0
-── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
-✖ dplyr::filter() masks stats::filter()
-✖ dplyr::lag()    masks stats::lag()
-
-Attaching package: ‘scales’
-
-The following object is masked from ‘package:purrr’:
-
-    discard
-
-The following object is masked from ‘package:readr’:
-
-    col_factor
-
-Loading required package: lubridate
-
-Attaching package: ‘lubridate’
-
-The following object is masked from ‘package:base’:
-
-    date
-
-Loading required package: PerformanceAnalytics
-Loading required package: xts
-Loading required package: zoo
-
-Attaching package: ‘zoo’
-
-The following objects are masked from ‘package:base’:
-
-    as.Date, as.Date.numeric
-
-
-Attaching package: ‘xts’
-
-The following objects are masked from ‘package:dplyr’:
-
-    first, last
-
-
-Attaching package: ‘PerformanceAnalytics’
-
-The following object is masked from ‘package:graphics’:
-
-    legend
-
-Loading required package: quantmod
-Registered S3 method overwritten by 'quantmod':
-  method            from
-  as.zoo.data.frame zoo 
-Version 0.4-0 included new data defaults. See ?getSymbols.
-══ Need to Learn tidyquant? ════════════════════════════════════════════════════
-Business Science offers a 1-hour course - Learning Lab #9: Performance Analysis & Portfolio Optimization with tidyquant!
-</> Learn more at: https://university.business-science.io/p/learning-labs-pro </>
-[ start      ]  2020-04-06 17:35:01
-
-> rmarkdown::render("intervention_corr_analysis.Rmd")
-
-
-processing file: intervention_corr_analysis.Rmd
-  |                                                                              |                                                                      |   0%  |                                                                              |...                                                                   |   4%
-   inline R code fragments
-
-  |                                                                              |......                                                                |   9%
-label: setup (with options) 
-List of 1
- $ include: logi FALSE
-
-  |                                                                              |.........                                                             |  13%
-  ordinary text without R code
-
-  |                                                                              |............                                                          |  17%
-label: read_in_data
-  |                                                                              |...............                                                       |  22%
-  ordinary text without R code
-
-  |                                                                              |..................                                                    |  26%
-label: prop_cases_hubei
-  |                                                                              |.....................                                                 |  30%
-  ordinary text without R code
-
-  |                                                                              |........................                                              |  35%
-label: estimate_R (with options) 
-List of 2
- $ echo   : symbol T
- $ results: chr "hide"
-
-  |                                                                              |...........................                                           |  39%
-  ordinary text without R code
-
-  |                                                                              |..............................                                        |  43%
-label: join_r_est_and_movement
-  |                                                                              |.................................                                     |  48%
-  ordinary text without R code
-
-  |                                                                              |.....................................                                 |  52%
-label: cross_corr
-  |                                                                              |........................................                              |  57%
-  ordinary text without R code
-
-  |                                                                              |...........................................                           |  61%
-label: cross_corr_lag_dist
-  |                                                                              |..............................................                        |  65%
-  ordinary text without R code
-
-  |                                                                              |.................................................                     |  70%
-label: lag_variable
-  |                                                                              |....................................................                  |  74%
-  ordinary text without R code
-
-  |                                                                              |.......................................................               |  78%
-label: rolling_corr
-  |                                                                              |..........................................................            |  83%
-  ordinary text without R code
-
-  |                                                                              |.............................................................         |  87%
-label: rolling_corr_sensitivity
-  |                                                                              |................................................................      |  91%
-  ordinary text without R code
-
-  |                                                                              |...................................................................   |  96%
-label: output_all
-  |                                                                              |......................................................................| 100%
-  ordinary text without R code
-
-
-output file: intervention_corr_analysis.knit.md
-
-/usr/bin/pandoc +RTS -K512m -RTS intervention_corr_analysis.utf8.md --to docx --from markdown+autolink_bare_uris+tex_math_single_backslash+smart --output intervention_corr_analysis.docx --highlight-style tango --reference-doc word_style.docx --lua-filter /usr/local/lib/R/site-library/rmarkdown/rmd/lua/pagebreak.lua 
-
-Output created: intervention_corr_analysis.docx
-[ end        ]  2020-04-06 17:35:06
-[ elapsed    ]  Ran report in 5.240706 secs
-[ artefact   ]  intervention_corr_analysis.docx: 864fb256d48af16db068fe902bd463f2
-[ ...        ]  dat_all.csv: 758a3b68bf71e856191c77e7d0bf4855
-[ ...        ]  dat_all_lag_sens_analysis.csv: c5c5f27069894efe0a06ab7fb5fc9d6f
-[ ...        ]  figure_S2.png: da86251cf7685ddae52619918010f631
-[ commit     ]  china_intervention_corr_analysis/20200406-173458-5e8f0319
-[ copy       ]
-[ import     ]  china_intervention_corr_analysis:20200406-173458-5e8f0319
-[ success    ]  :)
